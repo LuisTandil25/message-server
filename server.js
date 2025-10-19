@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,17 +9,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Ruta para recibir mensajes (GET)
+// Ruta principal para recibir mensajes (GET)
 app.get('/message.php', (req, res) => {
   try {
-    // Log de la solicitud recibida
-    console.log('📨 Mensaje recibido:', {
-      query: req.query,
-      headers: req.headers,
-      timestamp: new Date().toISOString()
-    });
+    console.log('📨 Mensaje recibido:', req.query);
 
-    // Extraer parámetros de la query string
+    // Extraer parámetros
     const { 
       app: appName, 
       sender, 
@@ -36,86 +30,70 @@ app.get('/message.php', (req, res) => {
       });
     }
 
-    // 🔧 AQUÍ PUEDES PERSONALIZAR LA LÓGICA DE RESPUESTA
-    let replyMessage = "";
+    // 🔧 LÓGICA DE RESPUESTA
+    let replyMessage = generarRespuesta(sender, message);
     
-    // Ejemplo de lógica de respuesta basada en el mensaje
-    const lowerMessage = message.toLowerCase();
-    
-    if (lowerMessage.includes('hola') || lowerMessage.includes('hi')) {
-      replyMessage = `¡Hola ${sender}! ¿En qué puedo ayudarte?`;
-    } else if (lowerMessage.includes('información') || lowerMessage.includes('info')) {
-      replyMessage = `Te proporciono información sobre nuestros servicios. ¿Algo más en lo que pueda ayudarte?`;
-    } else if (lowerMessage.includes('gracias') || lowerMessage.includes('thanks')) {
-      replyMessage = `¡De nada ${sender}! ¡Que tengas un buen día!`;
-    } else {
-      replyMessage = `Hola ${sender}, recibí tu mensaje: "${message}". ¿En qué más puedo ayudarte?`;
-    }
+    console.log('📤 Respuesta enviada:', replyMessage);
 
-    // Log de la respuesta
-    console.log('📤 Respuesta enviada:', {
-      reply: replyMessage,
-      timestamp: new Date().toISOString()
-    });
-
-    // Enviar respuesta en formato JSON
+    // Enviar respuesta
     res.json({
       reply: replyMessage
     });
 
   } catch (error) {
-    console.error('❌ Error procesando mensaje:', error);
+    console.error('❌ Error:', error);
     res.status(500).json({
       reply: "Error interno del servidor"
     });
   }
 });
 
-// Ruta POST alternativa (por si necesitas)
-app.post('/message.php', (req, res) => {
-  try {
-    const { app: appName, sender, message, groupName, phone } = req.body;
-    
-    console.log('📨 Mensaje POST recibido:', req.body);
-
-    // Misma lógica de respuesta que en GET
-    let replyMessage = `Hola ${sender}, recibí tu mensaje POST: "${message}"`;
-    
-    res.json({
-      reply: replyMessage
-    });
-
-  } catch (error) {
-    console.error('❌ Error procesando mensaje POST:', error);
-    res.status(500).json({
-      reply: "Error interno del servidor"
-    });
+// Función para generar respuestas
+function generarRespuesta(sender, message) {
+  const lowerMessage = message.toLowerCase().trim();
+  
+  if (lowerMessage.includes('hola') || lowerMessage.includes('hi')) {
+    return `¡Hola ${sender}! 👋 ¿En qué puedo ayudarte?`;
   }
-});
+  
+  if (lowerMessage.includes('información') || lowerMessage.includes('info')) {
+    return `Te proporciono información sobre nuestros servicios. ¿Algo específico que necesites?`;
+  }
+  
+  if (lowerMessage.includes('gracias') || lowerMessage.includes('thanks')) {
+    return `¡De nada ${sender}! 😊 ¿Necesitas algo más?`;
+  }
+  
+  if (lowerMessage.includes('precio') || lowerMessage.includes('costo')) {
+    return `Los precios varían según el servicio. ¿Podrías decirme qué servicio te interesa?`;
+  }
+  
+  // Respuesta por defecto
+  return `Hola ${sender}, recibí tu mensaje: "${message}". ¿En qué más puedo ayudarte?`;
+}
 
-// Ruta de salud para verificar que el servidor está funcionando
+// Ruta de salud
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'Servidor de mensajes funcionando',
+    message: 'Servidor funcionando en Railway ✅',
     timestamp: new Date().toISOString()
   });
 });
 
-// Manejo de rutas no encontradas
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: "Ruta no encontrada",
-    availableRoutes: [
-      "GET /message.php",
-      "POST /message.php", 
-      "GET /health"
-    ]
+// Ruta de inicio
+app.get('/', (req, res) => {
+  res.json({
+    message: '🚀 Servidor de Mensajes desplegado en Railway',
+    endpoints: {
+      'GET /message.php': 'Recibir mensajes',
+      'GET /health': 'Verificar estado del servidor'
+    },
+    usage: 'Ejemplo: /message.php?app=WhatsApp&sender=Juan&message=Hola'
   });
 });
 
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
 });
